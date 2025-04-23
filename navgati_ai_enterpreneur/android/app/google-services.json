@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "152986151993",
+    "project_id": "navgatiai-ca3ee",
+    "storage_bucket": "navgatiai-ca3ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152986151993:android:f19f7bd2c2ac1a97b8f1e8",
+        "android_client_info": {
+          "package_name": "com.example.navgati_ai_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAc5Z_xJQt8aoxsxuJS5SYPQBgDNiis5fI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152986151993:android:2dae95ff7332748db8f1e8",
+        "android_client_info": {
+          "package_name": "com.example.navgati_ai_enterpreneur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAc5Z_xJQt8aoxsxuJS5SYPQBgDNiis5fI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
