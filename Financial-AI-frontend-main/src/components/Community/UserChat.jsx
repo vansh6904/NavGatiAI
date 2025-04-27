@@ -33,8 +33,8 @@ const UserChat = () => {
 
     const handleJoinCommunity = async (communityId) => {
         try {
-            await axios.post(
-                `${import.meta.env.VITE_BASE_URL}/communities/${communityId}/join`,
+            await axios.post(`
+                ${import.meta.env.VITE_BASE_URL}/communities/${communityId}/join`,
                 {},
                 { withCredentials: true }
             );
@@ -78,7 +78,9 @@ const UserChat = () => {
                                 <p className="text-sm text-teal-300">{community.description}</p>
                             </CardHeader>
                             <CardContent className="text-sm space-y-2">
-                                <p className="text-gray-400">Created by: {community.createdBy.username}</p>
+                                <p className="text-gray-400">
+                                    Created by: {community.createdBy?.username || "Unknown"}
+                                </p>
                                 <div className="flex items-center justify-between">
                                     <span className="text-teal-400 text-sm">
                                         {community.members.length} members

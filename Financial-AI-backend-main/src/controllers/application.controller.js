@@ -2,20 +2,20 @@
 import {Application} from "../models/application.models.js";
 
 // User: Submit application
-export const submitApplication = async (req, res,next) => {
-    try {
-        const application = await Application.create({
-            ...req.body,
-            applicant: req.user._id
-        });
-        return res.status(201).json({
-            statusCode: 200,
-            data: application,
-            message: "Application Submitted Successfully"
-        });
-    } catch (error) {
-       next(error);
-    }
+export const submitApplication = async (req, res, next) => {
+  try {
+    const application = await Application.create({
+      ...req.body,
+      applicant: req.user._id, // Associate the application with the logged-in user
+    });
+    return res.status(201).json({
+      statusCode: 200,
+      data: application,
+      message: "Application Submitted Successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // User: Get applications
@@ -74,6 +74,7 @@ export const updateApplicationStatus = async (req, res, next) => {
 export const deleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(id);
 
     const deletedApplication = await Application.findByIdAndDelete(id);
 

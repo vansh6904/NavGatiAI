@@ -1,5 +1,5 @@
 // Microfinance.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from './Card';
@@ -58,9 +58,20 @@ const Microfinance = () => {
     }
 
     try {
+      // Add email and phoneNumber from the logged-in user to the formData
+      const applicationData = {
+        ...formData,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        // email: user.email, // Assuming `user` contains the logged-in user's email
+        // phoneNumber: user.phoneNumber, // Assuming `user` contains the logged-in user's phone number
+      };
+      // console.log("MICROFINANCE DEBUG ",user.email, user.phoneNumber);
+
+      // Submit the application
       await axios.post(
         `${import.meta.env.VITE_BASE_URL}/application/submit`,
-        formData,
+        applicationData,
         { withCredentials: true }
       );
 
@@ -83,10 +94,10 @@ const Microfinance = () => {
         monthlyIncome: '',
         fundingPurpose: '',
         requiredAmount: '',
-        fundingType: '',
+        fundingType: ''
       });
     } catch (error) {
-      toast.error('Submission failed', {
+      toast.error('Submission failed'+error, {
         style: { background: '#dc2626', color: 'white' },
       });
       console.log(error);

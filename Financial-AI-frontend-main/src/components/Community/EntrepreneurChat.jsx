@@ -39,19 +39,22 @@ function EntrepreneurChat() {
     useEffect(() => {
         const fetchCommunities = async () => {
             try {
-                const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/communities`);
-                const filteredCommunities = response.data.data.filter(
-                    (community) => community.createdBy.username === userData.username
-                );
-                setCommunities(filteredCommunities);
+                const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/communities`, {
+                    withCredentials: true,
+                });
+                console.log("Communities Response:", response.data);
+
+                // Directly set the communities without additional filtering
+                setCommunities(response.data.data);
             } catch (error) {
+                console.error("Error fetching communities:", error);
                 toast.error("Failed to fetch communities", {
-                    style: { background: "#dc2626", color: "white" }
+                    style: { background: "#dc2626", color: "white" },
                 });
             }
         };
         fetchCommunities();
-    }, [userData.username]);
+    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">

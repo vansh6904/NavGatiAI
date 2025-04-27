@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:navgati_ai_enterpreneur/services/Api.dart';
 import 'firebase_options.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -68,6 +69,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -79,6 +81,7 @@ class _LoginPageState extends State<LoginPage> {
   void _login() async {
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        // username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
@@ -89,14 +92,39 @@ class _LoginPageState extends State<LoginPage> {
               .collection('investors')
               .doc(credential.user!.uid)
               .get();
-
       if (userDoc.exists && userDoc.data()?['banned'] == true) {
+        print("user is banned");
         setState(() {
           _error = 'Your account has been banned. Please contact support.';
         });
         await FirebaseAuth.instance.signOut(); // Log out the user
         return;
       }
+      if (userDoc.exists && userDoc.data()?['verified'] == false) {
+        print("user is not verified");
+        setState(() {
+          _error =
+              'Your account has not been verified. Please contact support.';
+        });
+        await FirebaseAuth.instance.signOut(); // Log out the user
+        return;
+      }
+      // if (userDoc.exists &&
+      //     userDoc.data()?['banned'] == true &&
+      //     userDoc.data()?['verified'] == false) {
+      //   print("user nor verified or is banned");
+      //   setState(() {
+      //     _error =
+      //         'Your account has either been banned or not verified. Please contact support.'; //aaishvarya
+      //   });
+      //   await FirebaseAuth.instance.signOut(); // Log out the user
+      //   return;
+      // }
+      var data = {
+        'username': _usernameController.text.trim(),
+        'password': _passwordController.text.trim(),
+      };
+      Api.loginUser(data); // Call your API to log in the user
 
       // Success! Navigate to home
       Navigator.pushReplacement(
@@ -120,6 +148,10 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            TextField(
+              controller: _usernameController,
+              decoration: const InputDecoration(labelText: 'Username'),
+            ),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
@@ -157,6 +189,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -177,20 +210,28 @@ class _RegisterPageState extends State<RegisterPage> {
           .collection('investors')
           .doc(credential.user!.uid)
           .set({
-            'userName': _nameController.text.trim(),
+            'userName': _usernameController.text.trim(),
+            'fullName': _nameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phoneController.text.trim(),
             'userId': credential.user!.uid,
             'verified': false,
             'banned': false,
           });
+      var data = {
+        'username': _usernameController.text.trim(),
+        'fullname': _nameController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phoneNumber': _phoneController.text.trim(),
+        'usertype': 'investor',
+      };
+      Api.addPerson(data); // Call your API to add the person
 
       // Navigate to login or directly to home
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(email: _emailController.text.trim()),
-        ),
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -210,6 +251,10 @@ class _RegisterPageState extends State<RegisterPage> {
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Full Name'),
+            ),
+            TextField(
+              controller: _usernameController,
+              decoration: const InputDecoration(labelText: 'User Name'),
             ),
             TextField(
               controller: _emailController,
@@ -337,12 +382,17 @@ class InvestTab extends StatelessWidget {
 class ViewBusinessesPage extends StatelessWidget {
   const ViewBusinessesPage({super.key});
 
+  // Fetch applications from the backend
+  Future<List<dynamic>> fetchApplications() async {
+    return await Api.getAllApplications();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Businesses looking for your support')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      body: FutureBuilder<List<dynamic>>(
+        future: fetchApplications(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('Error loading businesses'));
@@ -351,20 +401,20 @@ class ViewBusinessesPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final applications = snapshot.data ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(child: Text('No business found'));
+          if (applications.isEmpty) {
+            return const Center(child: Text('No businesses found'));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
+            itemCount: applications.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
+              final data = applications[index];
               final title = data['businessName'] ?? 'No name specified';
               final purpose = data['fundingPurpose'] ?? 'No purpose specified';
-              final owner = data['userName'] ?? 'Unknown Founder';
+              final owner = data['applicant']?['username'] ?? 'Unknown Founder';
 
               return Card(
                 elevation: 4,
@@ -449,16 +499,39 @@ class YourInvestmentsPage extends StatelessWidget {
   final String email;
   const YourInvestmentsPage({super.key, required this.email});
 
+  Future<List<Map<String, dynamic>>> fetchInvestedBusinesses() async {
+    // Step 1: Get investor's investedCompanies from Firestore
+    final querySnapshot =
+        await FirebaseFirestore.instance
+            .collection('investors')
+            .where('email', isEqualTo: email)
+            .get();
+
+    if (querySnapshot.docs.isEmpty) return [];
+
+    final investorData =
+        querySnapshot.docs.first.data() as Map<String, dynamic>;
+    final List<dynamic> investedCompanies =
+        investorData['investedCompanies'] ?? [];
+
+    // Step 2: Fetch all businesses from MongoDB
+    final allBusinesses = await Api.getAllApplications();
+
+    // Step 3: Filter businesses where businessName matches investedCompanies
+    final investedBusinesses =
+        allBusinesses.where((business) {
+          return investedCompanies.contains(business['businessName']);
+        }).toList();
+
+    return List<Map<String, dynamic>>.from(investedBusinesses);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Your Investments')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('investors')
-                .where('email', isEqualTo: email)
-                .snapshots(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: fetchInvestedBusinesses(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('Error loading investments'));
@@ -467,133 +540,115 @@ class YourInvestmentsPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final businesses = snapshot.data ?? [];
 
-          if (docs.isEmpty) {
+          if (businesses.isEmpty) {
             return const Center(child: Text('No investments found'));
           }
 
           return ListView.builder(
-            itemCount: docs.length,
+            itemCount: businesses.length,
+            padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final List<dynamic> companies = data['investedCompanies'] ?? [];
+              final data = businesses[index];
+              final businessName = data['businessName'] ?? 'Unnamed Business';
+              final founderEmail = data['email'] ?? 'N/A';
+              final founderPhone = data['phoneNumber'] ?? 'N/A';
 
               return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      companies.map<Widget>((company) {
-                        // You can dynamically set founderEmail & founderPhone per company here
-                        final String businessName = company.toString();
-                        final String founderEmail = email.toString();
-                        final String founderPhone =
-                            "7304080858"; // Replace dynamically
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10.0),
-                          child: InkWell(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text('Contact Founder'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            final Uri emailLaunchUri = Uri(
-                                              scheme: 'mailto',
-                                              path: founderEmail,
-                                              // query: Uri.encodeFull(),
-                                            );
-                                            launchUrl(emailLaunchUri);
-                                          },
-                                          icon: const Icon(Icons.email),
-                                          label: const Text('Email'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.blue,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            final Uri whatsappUri = Uri(
-                                              scheme: 'https',
-                                              host: 'wa.me',
-                                              path: founderPhone,
-                                              query: Uri.encodeFull('text='),
-                                            );
-                                            launchUrl(whatsappUri);
-                                          },
-                                          icon: const Icon(Icons.message),
-                                          label: const Text('WhatsApp'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            final Uri phoneUri = Uri(
-                                              scheme: 'tel',
-                                              path: founderPhone,
-                                            );
-                                            launchUrl(phoneUri);
-                                          },
-                                          icon: const Icon(Icons.phone),
-                                          label: const Text('Call'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Close'),
-                                      ),
-                                    ],
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: InkWell(
+                  onTap: () {
+                    // Show contact dialog
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Contact Founder'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final Uri emailUri = Uri(
+                                    scheme: 'mailto',
+                                    path: founderEmail,
                                   );
+                                  launchUrl(emailUri);
                                 },
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Card(
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                color: Colors.grey[100],
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14.0,
-                                    horizontal: 16.0,
-                                  ),
-                                  child: Text(
-                                    businessName,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
+                                icon: const Icon(Icons.email),
+                                label: const Text('Email'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 10),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final Uri whatsappUri = Uri(
+                                    scheme: 'https',
+                                    host: 'wa.me',
+                                    path: founderPhone,
+                                    query: Uri.encodeFull('text='),
+                                  );
+                                  launchUrl(whatsappUri);
+                                },
+                                icon: const Icon(Icons.message),
+                                label: const Text('WhatsApp'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final Uri phoneUri = Uri(
+                                    scheme: 'tel',
+                                    path: founderPhone,
+                                  );
+                                  launchUrl(phoneUri);
+                                },
+                                icon: const Icon(Icons.phone),
+                                label: const Text('Call'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Close'),
+                            ),
+                          ],
                         );
-                      }).toList(),
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    color: Colors.grey[100],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14.0,
+                        horizontal: 16.0,
+                      ),
+                      child: Text(
+                        businessName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
                 ),
               );
             },
@@ -627,13 +682,21 @@ class BusinessDetailsPage extends StatelessWidget {
         data['fundingPurpose'] ?? 'Funding Purpose not stated';
     final businessStage = data['businessStage'] ?? 'Stage not stated';
     final fundingType = data['fundingType'] ?? 'Funding Type not stated';
-    final monthlyIncome = data['monthlyIncome'] ?? 'Not specified';
-    final numEmployees = data['numEmployees'] ?? 'Not specified';
-    final requiredAmount = data['requiredAmount'] ?? 'Amount not stated';
+    final monthlyIncome =
+        data['monthlyIncome']?.toString() ??
+        'Not specified'; // Convert to string
+    final numEmployees =
+        data['numEmployees']?.toString() ??
+        'Not specified'; // Convert to string
+    final requiredAmount =
+        data['requiredAmount']?.toString() ??
+        'Amount not stated'; // Convert to string
     final userId = data['userId'] ?? 'Unknown User ID';
     final userName = data['userName'] ?? 'Anonymous';
     final founderEmail =
-        data['email'] ?? ''; // make sure this field exists in Firestore
+        data['email'] ?? ''; // Ensure this field exists in MongoDB
+    final founderPhone =
+        data['phoneNumber'] ?? ''; // Ensure this field exists in MongoDB
 
     return Scaffold(
       appBar: AppBar(title: Text(businessName)),
@@ -672,7 +735,7 @@ class BusinessDetailsPage extends StatelessWidget {
                 _buildDetailRow("Funding Purpose", fundingPurpose),
                 _buildDetailRow("Funding Type", fundingType),
                 _buildDetailRow("Monthly Income", monthlyIncome),
-                _buildDetailRow("Number of Employees", numEmployees.toString()),
+                _buildDetailRow("Number of Employees", numEmployees),
                 _buildDetailRow("Required Amount", requiredAmount),
                 _buildDetailRow("User ID", userId),
 
@@ -714,7 +777,7 @@ class BusinessDetailsPage extends StatelessWidget {
                                       scheme: 'https',
                                       host: 'wa.me',
                                       path:
-                                          '7304080858', // Replace with founder's phone number
+                                          founderPhone, // Replace with founder's phone number
                                       query: Uri.encodeFull(
                                         'text=Hi $userName, I am interested in funding your business idea.',
                                       ),
@@ -734,7 +797,7 @@ class BusinessDetailsPage extends StatelessWidget {
                                     final Uri phoneUri = Uri(
                                       scheme: 'tel',
                                       path:
-                                          '7304080858', // Replace with founder's phone number
+                                          founderPhone, // Replace with founder's phone number
                                     );
                                     launchUrl(phoneUri);
                                   },

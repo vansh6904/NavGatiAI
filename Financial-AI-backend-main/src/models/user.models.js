@@ -25,7 +25,7 @@ const userSchema = new Schema(
         },
         usertype: {
             type: String,
-            enum: ["user", "entrepreneur"],
+            enum: ["user", "entrepreneur","investor","admin"],
             default: "user",
         },
         communities: [

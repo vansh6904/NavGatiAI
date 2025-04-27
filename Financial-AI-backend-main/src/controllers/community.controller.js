@@ -61,27 +61,24 @@ export const joinCommunity = async (req, res,next) => {
 };
 
 // Get all communities
-export const getCommunities = async (req, res,next) => {
+export const getCommunities = async (req, res, next) => {
     try {
-        const communities = await Community
-        .find()
-        .populate(
-            "createdBy",
-            "username"
-        )
-        .populate(
-            "members",
-            "username"
-        );
-        
-        return res.status(201).json({
+        const communities = await Community.find() // Fetch all communities
+            .populate("createdBy", "username")
+            .populate("members", "username");
+
+        return res.status(200).json({
             statusCode: 200,
             data: communities,
-            message: "Communities fetched Successfully"
+            message: "Communities fetched successfully",
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
-        next(error);
+        console.error("Error fetching communities:", error);
+
+        // Only call next(error) if no response has been sent
+        if (!res.headersSent) {
+            next(error);
+        }
     }
 };
 

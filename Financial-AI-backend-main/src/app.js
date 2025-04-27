@@ -40,16 +40,16 @@ io.on("connection", (socket) => {
 });
 
 //uncomment while running web
-app.use(cors({
-    origin: ['http://localhost:5173'],
-    credentials: true,
-}));
+// app.use(cors({
+//     origin: ['http://localhost:5173'],
+//     credentials: true,
+// }));
 
 //uncomment while running app
-// app.use(cors({
-//   origin: '*', // Allow all origins (not recommended for production)
-//   credentials: true,
-// }));
+app.use(cors({
+  origin: '*', // Allow all origins (not recommended for production)
+  credentials: true,
+}));
 
 app.use(express.json({
     limit: '20kb'

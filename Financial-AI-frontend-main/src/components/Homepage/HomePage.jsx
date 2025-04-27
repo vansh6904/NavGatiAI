@@ -40,49 +40,77 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100">
       <main className="pt-24 px-4 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <motion.section className="text-center max-w-4xl mx-auto" style={{ opacity, y }}>
-          <div className="relative inline-block mb-12">
+          <motion.section className="text-center max-w-4xl mx-auto" style={{ opacity, y }}>
+            <div className="relative inline-block mb-12">
+              <motion.div 
+                initial={{ scale: 0.9 }} 
+                animate={{ scale: 1 }} 
+                transition={{ duration: 0.5 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 blur-md opacity-20 -z-10"></div>
+                <img
+            src={`https://ui-avatars.com/api/?name=${firstname}+${lastname}&color=007bff&background=e0e0e0`}
+            alt="Profile"
+            className="w-32 h-32 sm:w-40 sm:h-40 rounded-full shadow-2xl border-4 border-gray-700/50 mb-8 object-cover"
+                />
+              </motion.div>
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="inline-block bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-6 py-3 rounded-full shadow-lg text-sm sm:text-base font-medium hover:shadow-teal-500/20 transition-all duration-300"
+              >
+                Welcome back, {userData?.username || "Guest"} <Sparkles className="inline ml-2 w-4 h-4" />
+              </motion.div>
+            </div>
+
             <motion.div 
-              initial={{ scale: 0.9 }} 
-              animate={{ scale: 1 }} 
-              transition={{ duration: 0.5 }}
-              className="relative"
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 blur-md opacity-20 -z-10"></div>
-              <img
-                src={`https://ui-avatars.com/api/?name=${firstname}+${lastname}&color=007bff&background=e0e0e0`}
-                alt="Profile"
-                className="w-32 h-32 sm:w-40 sm:h-40 rounded-full shadow-2xl border-4 border-gray-700/50 mb-8 object-cover"
-              />
+              <Card className="max-w-2xl mx-auto p-6 bg-gray-800/60 border-gray-700/50 backdrop-blur-sm hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="space-y-4">
+            {(() => {
+                const quotes = [
+                { text: "Financial freedom is available to those who learn about it and work for it.", author: "Robert Kiyosaki" },
+                { text: "Do not save what is left after spending, but spend what is left after saving.", author: "Warren Buffett" },
+                { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+                { text: "The more you learn, the more you earn.", author: "Warren Buffett" },
+                { text: "A budget is telling your money where to go instead of wondering where it went.", author: "Dave Ramsey" },
+                { text: "Wealth consists not in having great possessions, but in having few wants.", author: "Epictetus" },
+                { text: "The quickest way to double your money is to fold it in half and put it in your back pocket.", author: "Will Rogers" },
+                { text: "It’s not about how much money you make, but how much money you keep.", author: "Robert Kiyosaki" },
+                { text: "The habit of saving is itself an education; it fosters every virtue, teaches self-denial, cultivates the sense of order, trains to forethought, and so broadens the mind.", author: "T.T. Munger" },
+                { text: "Do not go broke trying to look rich.", author: "Anonymous" },
+                { text: "The goal isn’t more money. The goal is living life on your terms.", author: "Chris Brogan" },
+                { text: "A penny saved is a penny earned.", author: "Benjamin Franklin" },
+                { text: "Beware of little expenses; a small leak will sink a great ship.", author: "Benjamin Franklin" },
+                { text: "Money grows on the tree of persistence.", author: "Japanese Proverb" },
+                { text: "The best way to predict your future is to create it.", author: "Abraham Lincoln" },
+                { text: "Happiness is not in the mere possession of money; it lies in the joy of achievement, in the thrill of creative effort.", author: "Franklin D. Roosevelt" },
+                { text: "Rich people have small TVs and big libraries, and poor people have small libraries and big TVs.", author: "Zig Ziglar" },
+                { text: "The art is not in making money, but in keeping it.", author: "Proverb" },
+                { text: "You must gain control over your money or the lack of it will forever control you.", author: "Dave Ramsey" },
+                { text: "Financial independence is about having more choices.", author: "Anonymous" }
+                ];
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                return (
+                <>
+                  <p className="text-lg sm:text-xl italic text-gray-200">
+                  "{randomQuote.text}"
+                  </p>
+                  <p className="text-sm text-gray-400">- {randomQuote.author}</p>
+                </>
+                );
+            })()}
+                </CardContent>
+              </Card>
             </motion.div>
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="inline-block bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-6 py-3 rounded-full shadow-lg text-sm sm:text-base font-medium hover:shadow-teal-500/20 transition-all duration-300"
-            >
-              Welcome back, {userData?.username || "Guest"} <Sparkles className="inline ml-2 w-4 h-4" />
-            </motion.div>
-          </div>
+          </motion.section>
 
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            <Card className="max-w-2xl mx-auto p-6 bg-gray-800/60 border-gray-700/50 backdrop-blur-sm hover:shadow-lg transition-shadow duration-300">
-              <CardContent className="space-y-4">
-                <p className="text-lg sm:text-xl italic text-gray-200">
-                  "A woman with a voice is, by definition, a strong woman."
-                </p>
-                <p className="text-sm text-gray-400">- Melinda Gates</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.section>
-
-        {/* Content Sections */}
+          {/* Content Sections */}
         <section className="max-w-6xl mx-auto space-y-12 py-12">
           <motion.div
             ref={journeyRef}
