@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:navgati_ai_admin/models/UserModel.dart';
 
 class Api {
-  static const baseUrl = "http://192.168.29.165:8000/api/v1/";
+  static const baseUrl = "http://10.168.0.107:8000/api/v1/";
   // static const baseUrl = "http://localhost:8000/api/v1/users/register";
 
   static getAllUsers() async {

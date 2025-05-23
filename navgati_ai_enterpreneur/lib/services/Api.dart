@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
-  static const baseUrl = "http://192.168.29.165:8000/api/v1/";
+  static const baseUrl = "http://10.168.0.107:8000/api/v1/";
 
   // Fetch all applications
   static Future<List<dynamic>> getAllApplications() async {

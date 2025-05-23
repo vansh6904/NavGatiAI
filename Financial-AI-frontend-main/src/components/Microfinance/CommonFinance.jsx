@@ -9,7 +9,7 @@ const CommonFinance = () => {
     return (
         <div>
             {isEntrepreneur ? (
-                <EntrepreneurFinance />
+                <Microfinance />
             ) : (
                 <Microfinance />
             )}

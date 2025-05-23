@@ -5,17 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:navgati_ai_enterpreneur/services/Api.dart';
 import 'firebase_options.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-//   runApp(const MyApp());
-
-// }
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const RootApp()); // <-- Launch RootApp instead of MyApp
+  runApp(const RootApp());
 }
 
 class RootApp extends StatelessWidget {
@@ -27,17 +23,22 @@ class RootApp extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const MaterialApp(
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+          return MaterialApp(
+            theme: ThemeData.dark().copyWith(
+              scaffoldBackgroundColor: const Color(0xFF111827),
+            ),
+            home: const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: Colors.teal),
+              ),
+            ),
           );
         }
 
-        // If user is logged in
         if (snapshot.hasData) {
           return MyApp(loggedIn: true, email: snapshot.data!.email ?? '');
         }
 
-        // Not logged in
         return const MyApp(loggedIn: false);
       },
     );
@@ -54,7 +55,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NavGatiAI - Investor',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF111827),
+        primaryColor: Colors.teal,
+        colorScheme: ColorScheme.dark(
+          primary: Colors.teal,
+          secondary: Colors.cyan,
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+      ),
       home: loggedIn ? HomePage(email: email) : const LoginPage(),
       debugShowCheckedModeBanner: false,
     );
@@ -73,60 +82,43 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // final String investorEmail = 'nice';
-  // final String investorPassword = 'password123';
-
   String? _error;
 
   void _login() async {
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        // username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Check if the user is banned
       final userDoc =
           await FirebaseFirestore.instance
               .collection('investors')
               .doc(credential.user!.uid)
               .get();
+
       if (userDoc.exists && userDoc.data()?['banned'] == true) {
-        print("user is banned");
         setState(() {
           _error = 'Your account has been banned. Please contact support.';
         });
-        await FirebaseAuth.instance.signOut(); // Log out the user
+        await FirebaseAuth.instance.signOut();
         return;
       }
       if (userDoc.exists && userDoc.data()?['verified'] == false) {
-        print("user is not verified");
         setState(() {
           _error =
               'Your account has not been verified. Please contact support.';
         });
-        await FirebaseAuth.instance.signOut(); // Log out the user
+        await FirebaseAuth.instance.signOut();
         return;
       }
-      // if (userDoc.exists &&
-      //     userDoc.data()?['banned'] == true &&
-      //     userDoc.data()?['verified'] == false) {
-      //   print("user nor verified or is banned");
-      //   setState(() {
-      //     _error =
-      //         'Your account has either been banned or not verified. Please contact support.'; //aaishvarya
-      //   });
-      //   await FirebaseAuth.instance.signOut(); // Log out the user
-      //   return;
-      // }
+
       var data = {
         'username': _usernameController.text.trim(),
         'password': _passwordController.text.trim(),
       };
-      Api.loginUser(data); // Call your API to log in the user
+      Api.loginUser(data);
 
-      // Success! Navigate to home
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -143,38 +135,133 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Investor Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                const Text(
+                  'Investor Login',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildInputField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  icon: Icons.person,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _emailController,
+                  label: 'Email',
+                  icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  icon: Icons.lock,
+                  obscureText: true,
+                ),
+                const SizedBox(height: 24),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 5,
+                  ),
+                  child: const Text('Login', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RegisterPage(),
+                      ),
+                    );
+                  },
+                  child: RichText(
+                    text: const TextSpan(
+                      text: "Don't have an account? ",
+                      style: TextStyle(color: Colors.grey),
+                      children: [
+                        TextSpan(
+                          text: 'Register here',
+                          style: TextStyle(
+                            color: Colors.cyan,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: _login, child: const Text('Login')),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RegisterPage()),
-                );
-              },
-              child: const Text("Don't have an account? Register here"),
-            ),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: Icon(icon, color: Colors.grey),
+        filled: true,
+        fillColor: const Color(0xFF1F2937),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 20,
         ),
       ),
     );
@@ -205,7 +292,6 @@ class _RegisterPageState extends State<RegisterPage> {
             password: _passwordController.text.trim(),
           );
 
-      // Add additional investor info to Firestore
       await FirebaseFirestore.instance
           .collection('investors')
           .doc(credential.user!.uid)
@@ -226,9 +312,8 @@ class _RegisterPageState extends State<RegisterPage> {
         'phoneNumber': _phoneController.text.trim(),
         'usertype': 'investor',
       };
-      Api.addPerson(data); // Call your API to add the person
+      Api.addPerson(data);
 
-      // Navigate to login or directly to home
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
@@ -243,38 +328,141 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Investor Register')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Full Name'),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                const Text(
+                  'Investor Registration',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildInputField(
+                  controller: _nameController,
+                  label: 'Full Name',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  icon: Icons.person,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _emailController,
+                  label: 'Email',
+                  icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  icon: Icons.lock,
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  icon: Icons.phone,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 24),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 5,
+                  ),
+                  child: const Text('Register', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: RichText(
+                    text: const TextSpan(
+                      text: "Already have an account? ",
+                      style: TextStyle(color: Colors.grey),
+                      children: [
+                        TextSpan(
+                          text: 'Login here',
+                          style: TextStyle(
+                            color: Colors.cyan,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'User Name'),
-            ),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: _register, child: const Text('Register')),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: Icon(icon, color: Colors.grey),
+        filled: true,
+        fillColor: const Color(0xFF1F2937),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 20,
         ),
       ),
     );
@@ -290,30 +478,44 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _tabs = [];
+  String? _profileImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _tabs.addAll([InvestTab(email: widget.email), const CommunitiesTab()]);
+    _loadUserProfile();
   }
 
-  void _onTabTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  Future<void> _loadUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('investors')
+              .doc(user.uid)
+              .get();
+      if (doc.exists) {
+        setState(() {
+          _profileImageUrl = doc.data()?['profileImage'];
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF111827),
       appBar: AppBar(
-        title: Text("Home"),
+        title: const Text(
+          'NavGatiAI - Investor',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1F2937),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(
@@ -324,7 +526,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: _tabs[_selectedIndex],
+      body: InvestTab(email: widget.email),
     );
   }
 }
@@ -335,44 +537,127 @@ class InvestTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Invest in Businesses')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF111827), Color(0xFF1F2937)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              child: ListTile(
-                title: const Text('View Businesses'),
-                subtitle: const Text('Explore uploaded business ideas'),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ViewBusinessesPage(),
-                    ),
-                  );
-                },
+            const Text(
+              'Investment Dashboard',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
-            Card(
-              child: ListTile(
-                title: const Text('Your Investments'),
-                subtitle: const Text('View your investment history'),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () {
-                  Navigator.push(
+            const SizedBox(height: 20),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 1,
+                childAspectRatio: 3,
+                mainAxisSpacing: 20,
+                children: [
+                  _buildFeatureCard(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => YourInvestmentsPage(email: email),
-                    ),
-                  );
-                },
+                    title: 'View Businesses',
+                    subtitle: 'Explore uploaded business ideas',
+                    icon: Icons.business_center,
+                    color: Colors.teal,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ViewBusinessesPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    title: 'Your Investments',
+                    subtitle: 'View your investment history',
+                    icon: Icons.attach_money,
+                    color: Colors.cyan,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => YourInvestmentsPage(email: email),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: const Color(0xFF1F2937),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );
@@ -382,7 +667,6 @@ class InvestTab extends StatelessWidget {
 class ViewBusinessesPage extends StatelessWidget {
   const ViewBusinessesPage({super.key});
 
-  // Fetch applications from the backend
   Future<List<dynamic>> fetchApplications() async {
     return await Api.getAllApplications();
   }
@@ -390,21 +674,38 @@ class ViewBusinessesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Businesses looking for your support')),
+      backgroundColor: const Color(0xFF111827),
+      appBar: AppBar(
+        title: const Text('Businesses'),
+        backgroundColor: const Color(0xFF1F2937),
+        elevation: 0,
+      ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchApplications(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading businesses'));
+            return const Center(
+              child: Text(
+                'Error loading businesses',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.teal),
+            );
           }
 
           final applications = snapshot.data ?? [];
 
           if (applications.isEmpty) {
-            return const Center(child: Text('No businesses found'));
+            return const Center(
+              child: Text(
+                'No businesses found',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           return ListView.builder(
@@ -416,73 +717,84 @@ class ViewBusinessesPage extends StatelessWidget {
               final purpose = data['fundingPurpose'] ?? 'No purpose specified';
               final owner = data['applicant']?['username'] ?? 'Unknown Founder';
 
-              return Card(
-                elevation: 4,
+              return Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BusinessDetailsPage(data: data),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.business,
-                              color: Color(0xFF00ACC1),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                child: Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: const Color(0xFF1F2937),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BusinessDetailsPage(data: data),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Icon(
+                                  Icons.business,
+                                  color: Colors.teal,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          purpose,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Founder: $owner',
-                              style: const TextStyle(
-                                fontStyle: FontStyle.italic,
-                                fontSize: 13,
-                                color: Colors.grey,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            purpose,
+                            style: const TextStyle(
+                              fontSize: 14,
                               color: Colors.grey,
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Founder: $owner',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -500,7 +812,6 @@ class YourInvestmentsPage extends StatelessWidget {
   const YourInvestmentsPage({super.key, required this.email});
 
   Future<List<Map<String, dynamic>>> fetchInvestedBusinesses() async {
-    // Step 1: Get investor's investedCompanies from Firestore
     final querySnapshot =
         await FirebaseFirestore.instance
             .collection('investors')
@@ -509,15 +820,12 @@ class YourInvestmentsPage extends StatelessWidget {
 
     if (querySnapshot.docs.isEmpty) return [];
 
-    final investorData =
-        querySnapshot.docs.first.data() as Map<String, dynamic>;
+    final investorData = querySnapshot.docs.first.data();
     final List<dynamic> investedCompanies =
         investorData['investedCompanies'] ?? [];
 
-    // Step 2: Fetch all businesses from MongoDB
     final allBusinesses = await Api.getAllApplications();
 
-    // Step 3: Filter businesses where businessName matches investedCompanies
     final investedBusinesses =
         allBusinesses.where((business) {
           return investedCompanies.contains(business['businessName']);
@@ -529,21 +837,60 @@ class YourInvestmentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Investments')),
+      backgroundColor: const Color(0xFF111827),
+      appBar: AppBar(
+        title: const Text('Your Investments'),
+        backgroundColor: const Color(0xFF1F2937),
+        elevation: 0,
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: fetchInvestedBusinesses(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading investments'));
+            return const Center(
+              child: Text(
+                'Error loading investments',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.teal),
+            );
           }
 
           final businesses = snapshot.data ?? [];
 
           if (businesses.isEmpty) {
-            return const Center(child: Text('No investments found'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.money_off, size: 60, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'No investments found',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ViewBusinessesPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Explore businesses to invest',
+                      style: TextStyle(color: Colors.teal),
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
@@ -555,100 +902,117 @@ class YourInvestmentsPage extends StatelessWidget {
               final founderEmail = data['email'] ?? 'N/A';
               final founderPhone = data['phoneNumber'] ?? 'N/A';
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: InkWell(
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF1F2937).withOpacity(0.8),
+                      const Color(0xFF111827),
+                    ],
+                  ),
+                ),
+                child: ListTile(
+                  title: Text(
+                    businessName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Click to contact founder',
+                    style: TextStyle(color: Colors.grey[400]),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.grey,
+                    size: 16,
+                  ),
                   onTap: () {
-                    // Show contact dialog
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text('Contact Founder'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  final Uri emailUri = Uri(
-                                    scheme: 'mailto',
-                                    path: founderEmail,
-                                  );
-                                  launchUrl(emailUri);
-                                },
-                                icon: const Icon(Icons.email),
-                                label: const Text('Email'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  final Uri whatsappUri = Uri(
-                                    scheme: 'https',
-                                    host: 'wa.me',
-                                    path: founderPhone,
-                                    query: Uri.encodeFull('text='),
-                                  );
-                                  launchUrl(whatsappUri);
-                                },
-                                icon: const Icon(Icons.message),
-                                label: const Text('WhatsApp'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  final Uri phoneUri = Uri(
-                                    scheme: 'tel',
-                                    path: founderPhone,
-                                  );
-                                  launchUrl(phoneUri);
-                                },
-                                icon: const Icon(Icons.phone),
-                                label: const Text('Call'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ],
+                        return Dialog(
+                          backgroundColor: const Color(0xFF1F2937),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text('Close'),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Contact Founder',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _buildContactButton(
+                                  context,
+                                  icon: Icons.email,
+                                  label: 'Email',
+                                  color: Colors.blue,
+                                  onPressed: () {
+                                    final Uri emailUri = Uri(
+                                      scheme: 'mailto',
+                                      path: founderEmail,
+                                    );
+                                    launchUrl(emailUri);
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                _buildContactButton(
+                                  context,
+                                  icon: Icons.message,
+                                  label: 'WhatsApp',
+                                  color: Colors.green,
+                                  onPressed: () {
+                                    final Uri whatsappUri = Uri(
+                                      scheme: 'https',
+                                      host: 'wa.me',
+                                      path: founderPhone,
+                                      query: Uri.encodeFull('text='),
+                                    );
+                                    launchUrl(whatsappUri);
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                _buildContactButton(
+                                  context,
+                                  icon: Icons.phone,
+                                  label: 'Call',
+                                  color: Colors.orange,
+                                  onPressed: () {
+                                    final Uri phoneUri = Uri(
+                                      scheme: 'tel',
+                                      path: founderPhone,
+                                    );
+                                    launchUrl(phoneUri);
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text(
+                                    'Close',
+                                    style: TextStyle(color: Colors.teal),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         );
                       },
                     );
                   },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: Colors.grey[100],
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14.0,
-                        horizontal: 16.0,
-                      ),
-                      child: Text(
-                        businessName,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  ),
                 ),
               );
             },
@@ -657,15 +1021,23 @@ class YourInvestmentsPage extends StatelessWidget {
       ),
     );
   }
-}
 
-class CommunitiesTab extends StatelessWidget {
-  const CommunitiesTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Communities (Coming Soon)')),
+  Widget _buildContactButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white),
+      label: Text(label, style: const TextStyle(color: Colors.white)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
   }
 }
@@ -682,24 +1054,22 @@ class BusinessDetailsPage extends StatelessWidget {
         data['fundingPurpose'] ?? 'Funding Purpose not stated';
     final businessStage = data['businessStage'] ?? 'Stage not stated';
     final fundingType = data['fundingType'] ?? 'Funding Type not stated';
-    final monthlyIncome =
-        data['monthlyIncome']?.toString() ??
-        'Not specified'; // Convert to string
-    final numEmployees =
-        data['numEmployees']?.toString() ??
-        'Not specified'; // Convert to string
+    final monthlyIncome = data['monthlyIncome']?.toString() ?? 'Not specified';
+    final numEmployees = data['numEmployees']?.toString() ?? 'Not specified';
     final requiredAmount =
-        data['requiredAmount']?.toString() ??
-        'Amount not stated'; // Convert to string
+        data['requiredAmount']?.toString() ?? 'Amount not stated';
     final userId = data['userId'] ?? 'Unknown User ID';
-    final userName = data['userName'] ?? 'Anonymous';
-    final founderEmail =
-        data['email'] ?? ''; // Ensure this field exists in MongoDB
-    final founderPhone =
-        data['phoneNumber'] ?? ''; // Ensure this field exists in MongoDB
+    final userName = data['applicant']?['username'] ?? 'Unknown Founder';
+    final founderEmail = data['email'] ?? '';
+    final founderPhone = data['phoneNumber'] ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: Text(businessName)),
+      backgroundColor: const Color(0xFF111827),
+      appBar: AppBar(
+        title: Text(businessName),
+        backgroundColor: const Color(0xFF1F2937),
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
@@ -707,6 +1077,7 @@ class BusinessDetailsPage extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          color: const Color(0xFF1F2937),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -715,8 +1086,9 @@ class BusinessDetailsPage extends StatelessWidget {
                 Text(
                   businessName,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -728,96 +1100,101 @@ class BusinessDetailsPage extends StatelessWidget {
                     color: Colors.grey,
                   ),
                 ),
-                const Divider(height: 24, thickness: 1.2),
-
+                const Divider(height: 24, thickness: 1, color: Colors.grey),
                 _buildDetailRow("Business Type", businessType),
                 _buildDetailRow("Business Stage", businessStage),
                 _buildDetailRow("Funding Purpose", fundingPurpose),
                 _buildDetailRow("Funding Type", fundingType),
-                _buildDetailRow("Monthly Income", monthlyIncome),
+                _buildDetailRow("Monthly Income", "₹$monthlyIncome"),
                 _buildDetailRow("Number of Employees", numEmployees),
-                _buildDetailRow("Required Amount", requiredAmount),
-                _buildDetailRow("User ID", userId),
-
-                const SizedBox(height: 20),
-
+                _buildDetailRow("Required Amount", "₹$requiredAmount"),
+                const SizedBox(height: 30),
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: const Text('Contact Founder'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    final Uri emailLaunchUri = Uri(
-                                      scheme: 'mailto',
-                                      path: founderEmail,
-                                      query: Uri.encodeFull(
-                                        'subject=Funding Opportunity for $businessName&body=Hi $userName, I am interested in funding your business idea.',
-                                      ),
-                                    );
-                                    launchUrl(emailLaunchUri);
-                                  },
-                                  icon: const Icon(Icons.email),
-                                  label: const Text('Email'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    final Uri whatsappUri = Uri(
-                                      scheme: 'https',
-                                      host: 'wa.me',
-                                      path:
-                                          founderPhone, // Replace with founder's phone number
-                                      query: Uri.encodeFull(
-                                        'text=Hi $userName, I am interested in funding your business idea.',
-                                      ),
-                                    );
-                                    launchUrl(whatsappUri);
-                                  },
-                                  icon: const Icon(Icons.message),
-                                  label: const Text('WhatsApp'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    final Uri phoneUri = Uri(
-                                      scheme: 'tel',
-                                      path:
-                                          founderPhone, // Replace with founder's phone number
-                                    );
-                                    launchUrl(phoneUri);
-                                  },
-                                  icon: const Icon(Icons.phone),
-                                  label: const Text('Call'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ],
+                          return Dialog(
+                            backgroundColor: const Color(0xFF1F2937),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Close'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Contact Founder',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _buildContactButton(
+                                    context,
+                                    icon: Icons.email,
+                                    label: 'Email',
+                                    color: Colors.blue,
+                                    onPressed: () {
+                                      final Uri emailLaunchUri = Uri(
+                                        scheme: 'mailto',
+                                        path: founderEmail,
+                                        query: Uri.encodeFull(
+                                          'subject=Funding Opportunity for $businessName&body=Hi $userName, I am interested in funding your business idea.',
+                                        ),
+                                      );
+                                      launchUrl(emailLaunchUri);
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _buildContactButton(
+                                    context,
+                                    icon: Icons.message,
+                                    label: 'WhatsApp',
+                                    color: Colors.green,
+                                    onPressed: () {
+                                      final Uri whatsappUri = Uri(
+                                        scheme: 'https',
+                                        host: 'wa.me',
+                                        path: founderPhone,
+                                        query: Uri.encodeFull(
+                                          'text=Hi $userName, I am interested in funding your business idea.',
+                                        ),
+                                      );
+                                      launchUrl(whatsappUri);
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _buildContactButton(
+                                    context,
+                                    icon: Icons.phone,
+                                    label: 'Call',
+                                    color: Colors.orange,
+                                    onPressed: () {
+                                      final Uri phoneUri = Uri(
+                                        scheme: 'tel',
+                                        path: founderPhone,
+                                      );
+                                      launchUrl(phoneUri);
+                                    },
+                                  ),
+                                  const SizedBox(height: 20),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text(
+                                      'Close',
+                                      style: TextStyle(color: Colors.teal),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           );
                         },
                       );
@@ -830,17 +1207,18 @@ class BusinessDetailsPage extends StatelessWidget {
                             ]),
                           }, SetOptions(merge: true));
                     },
-
                     icon: const Icon(Icons.attach_money),
-                    label: const Text('Contact'),
+                    label: const Text('Contact to invest'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.teal,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
-                        vertical: 12,
+                        vertical: 16,
                       ),
-                      textStyle: const TextStyle(fontSize: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
                   ),
                 ),
@@ -854,13 +1232,43 @@ class BusinessDetailsPage extends StatelessWidget {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value)),
+          SizedBox(
+            width: 120,
+            child: Text(
+              "$label: ",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.tealAccent,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.white)),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContactButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white),
+      label: Text(label, style: const TextStyle(color: Colors.white)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
